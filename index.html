@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Flare Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#14161A; --surface:#1D2026; --edge:#2B2F37; --ink:#EDEFF3; --muted:#8A919E;
+  --drop:#E8A13D; --audit:#4C9BE8; --return:#9B7BE8; --store:#46B97C; --danger:#E05C5C;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 Inter,system-ui,sans-serif;overscroll-behavior:none}
+h1,h2,.tile b,.stage{font-family:'Barlow Condensed',Inter,sans-serif;letter-spacing:.04em;text-transform:uppercase}
+#app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header{padding:14px 16px 10px;display:flex;align-items:baseline;gap:10px}
+header h1{font-size:22px;font-weight:700}
+header .sub{color:var(--muted);font-size:12.5px;margin-left:auto}
+.rail{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 16px 0}
+.rail .seg{height:5px;border-radius:3px;background:var(--edge);transition:background .25s}
+.rail .seg.on-drop{background:var(--drop)} .rail .seg.on-audit{background:var(--audit)}
+.rail .seg.on-return{background:var(--return)} .rail .seg.on-store{background:var(--store)}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px 16px 0}
+.stage{font-size:10.5px;color:var(--muted);text-align:center;font-weight:600}
+main{flex:1;padding:14px 16px 90px}
+.card{background:var(--surface);border:1px solid var(--edge);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+input{width:100%;background:var(--bg);border:1px solid var(--edge);border-radius:10px;color:var(--ink);padding:11px 12px;font:inherit}
+input:focus{outline:2px solid var(--audit);outline-offset:1px}
+.pinrow{display:flex;gap:8px}
+.pinrow input{flex:1;letter-spacing:.3em;font-size:18px;text-align:center}
+.pinrow button{background:var(--audit);border:none;color:#0D1520;border-radius:10px;padding:0 18px;font:600 14px Inter}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{border:1px solid var(--edge);border-radius:14px;background:var(--surface);padding:18px 14px;text-align:left;color:var(--ink);cursor:pointer;min-height:96px;display:flex;flex-direction:column;justify-content:space-between}
+.tile b{font-size:19px;font-weight:700;display:block}
+.tile span{font-size:12px;color:var(--muted)}
+.tile .dot{width:10px;height:10px;border-radius:50%;margin-bottom:8px}
+.tile:active{transform:scale(.985)}
+.tile[disabled]{opacity:.45}
+.t-drop .dot{background:var(--drop)} .t-audit .dot{background:var(--audit)}
+.t-return .dot{background:var(--return)} .t-store .dot{background:var(--store)}
+.modebar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.modebar .pill{font-family:'Barlow Condensed';font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:16px;padding:6px 12px;border-radius:999px;color:#14161A}
+.p-drop{background:var(--drop)} .p-audit{background:var(--audit)} .p-return{background:var(--return)} .p-store{background:var(--store)}
+.back{margin-left:auto;background:none;border:1px solid var(--edge);color:var(--ink);border-radius:10px;padding:9px 14px;font:600 14px Inter}
+#reader{border-radius:14px;overflow:hidden;border:1px solid var(--edge);background:#000;min-height:230px}
+#reader video{border-radius:14px}
+#camerr{color:var(--danger);font-size:13px;margin-top:8px;display:none}
+.hint{color:var(--muted);font-size:12.5px;text-align:center;margin:8px 0 2px}
+.manual{display:flex;gap:8px;margin-top:10px}
+.manual input{flex:1}
+.manual button{background:var(--edge);border:none;color:var(--ink);border-radius:10px;padding:0 16px;font:inherit}
+.list{margin-top:14px}
+.item{background:var(--surface);border:1px solid var(--edge);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px}
+.item .row{display:flex;align-items:center;gap:10px}
+.item code{font-size:15px;font-weight:600;font-family:ui-monospace,Menlo,monospace}
+.item .game{color:var(--muted);font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-size:11px;border-radius:999px;padding:3px 9px;font-weight:600;white-space:nowrap}
+.b-queued{background:#3A3320;color:var(--drop)} .b-sent{background:#1F3A2C;color:var(--store)}
+.b-unreg{background:#3A2424;color:var(--danger)}
+.flagbtn{background:none;border:1px solid var(--edge);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:12px}
+.flagbtn.on{border-color:var(--danger);color:var(--danger);font-weight:600}
+.flagbox{display:grid;grid-template-columns:110px 1fr;gap:8px}
+.footer{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(transparent,var(--bg) 30%);padding:12px 16px 16px}
+.footer .inner{max-width:520px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.count{font-family:'Barlow Condensed';font-weight:700;font-size:20px}
+.count small{color:var(--muted);font:500 12px Inter;display:block;text-transform:none;letter-spacing:0}
+.send{margin-left:auto;background:var(--store);color:#0E1512;border:none;border-radius:12px;padding:13px 20px;font:600 15px Inter;min-width:150px}
+.send[disabled]{background:var(--edge);color:var(--muted)}
+.toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--edge);color:var(--ink);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:90%}
+.toast.show{opacity:1}
+.hidden{display:none!important}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><h1>Flare Tracker</h1><div class="sub" id="whoami"></div></header>
+  <div class="rail"><div class="seg" id="seg0"></div><div class="seg" id="seg1"></div><div class="seg" id="seg2"></div><div class="seg" id="seg3"></div></div>
+  <div class="stages"><div class="stage">Drop off</div><div class="stage">To audit</div><div class="stage">Returned</div><div class="stage">Storage</div></div>
+
+  <main>
+    <section id="home">
+      <div class="card" id="pincard">
+        <label for="pin">Enter your PIN to sign in</label>
+        <div class="pinrow">
+          <input id="pin" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="••••">
+          <button onclick="signIn()">Sign in</button>
+        </div>
+      </div>
+      <div class="tiles">
+        <button class="tile t-drop"   onclick="startMode('Drop off from site')"><span class="dot"></span><b>Drop off</b><span>Site manager hands games in</span></button>
+        <button class="tile t-audit"  onclick="startMode('Pickup for audit')"><span class="dot"></span><b>Pickup for audit</b><span>Auditor takes the stack</span></button>
+        <button class="tile t-return" onclick="startMode('Return after audit')"><span class="dot"></span><b>Return from audit</b><span>Flag any big differences</span></button>
+        <button class="tile t-store"  onclick="startMode('Pickup for storage')"><span class="dot"></span><b>To storage</b><span>Game packer closes it out</span></button>
+      </div>
+    </section>
+
+    <section id="scan" class="hidden">
+      <div class="modebar">
+        <span class="pill" id="modepill"></span>
+        <button class="back" onclick="stopMode()">&#8592; Back</button>
+      </div>
+      <div id="reader"></div>
+      <div id="camerr"></div>
+      <p class="hint">Hold the barcode steady. It must read clean twice before it counts.</p>
+      <div class="manual">
+        <input id="manualbc" placeholder="Type a code if the barcode is damaged">
+        <button onclick="manualAdd()">Add</button>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+  </main>
+
+  <div class="footer">
+    <div class="inner">
+      <div class="count"><span id="nqueued">0</span> queued &middot; <span id="nsent">0</span> saved<small id="netstate">online</small></div>
+      <button class="send" id="sendbtn" onclick="flush(true)" disabled>Send now</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =============== CONFIG — EDIT THIS ONE LINE =============== */
+var SCRIPT_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+/* =========================================================== */
+
+var MIN_LEN = 6, CONFIRMS = 2, COOLDOWN_MS = 3500, AUTO_FLUSH_MS = 4000;
+
+var GAMES = {};
+var mode = null, scanner = null, candidate = {v:'',n:0}, lastAccepted = {}, sending = false;
+var session = JSON.parse(localStorage.getItem('ft_session')||'[]');
+var MODE_CLASS = {'Drop off from site':['p-drop','on-drop',0],'Pickup for audit':['p-audit','on-audit',1],
+                  'Return after audit':['p-return','on-return',2],'Pickup for storage':['p-store','on-store',3]};
+
+function myPin(){ return localStorage.getItem('ft_pin')||''; }
+function myName(){ return localStorage.getItem('ft_name')||''; }
+
+/* ---------- sign in ---------- */
+function signIn(){
+  var pin = document.getElementById('pin').value.trim();
+  if(!pin){ toast('Enter your PIN.'); return; }
+  fetch(SCRIPT_URL + '?fn=bootstrap&pin=' + encodeURIComponent(pin))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ toast(d.error||'Sign-in failed.'); return; }
+      localStorage.setItem('ft_pin', pin);
+      localStorage.setItem('ft_name', d.name);
+      GAMES = d.games||{};
+      paintIdentity(); toast('Signed in as '+d.name+'.');
+    })
+    .catch(function(){ toast('Could not reach the server. Check signal and the SCRIPT_URL.'); });
+}
+function paintIdentity(){
+  var ok = !!myPin() && !!myName();
+  document.getElementById('whoami').textContent = ok ? myName() : '';
+  document.getElementById('pincard').classList.toggle('hidden', ok);
+}
+function refreshGames(){
+  if(!myPin()) return;
+  fetch(SCRIPT_URL + '?fn=bootstrap&pin=' + encodeURIComponent(myPin()))
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.ok){ GAMES = d.games||{}; localStorage.setItem('ft_name', d.name); paintIdentity(); render(); }
+                       else { localStorage.removeItem('ft_pin'); paintIdentity(); } })
+    .catch(function(){});
+}
+
+/* ---------- modes ---------- */
+function startMode(m){
+  if(!myPin()){ toast('Sign in with your PIN first.'); return; }
+  mode = m;
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('scan').classList.remove('hidden');
+  var mp = document.getElementById('modepill'); mp.textContent = m; mp.className = 'pill '+MODE_CLASS[m][0];
+  for(var i=0;i<4;i++) document.getElementById('seg'+i).className = 'seg' + (i===MODE_CLASS[m][2] ? ' '+MODE_CLASS[m][1] : '');
+  startScanner(); render();
+}
+function stopMode(){
+  if(scanner){ try{scanner.stop();}catch(e){} scanner=null; }
+  mode=null; candidate={v:'',n:0};
+  document.getElementById('scan').classList.add('hidden');
+  document.getElementById('home').classList.remove('hidden');
+  document.getElementById('camerr').style.display='none';
+  for(var i=0;i<4;i++) document.getElementById('seg'+i).className='seg';
+  flush(true);
+}
+function startScanner(){
+  var errbox = document.getElementById('camerr'); errbox.style.display='none';
+  try{
+    scanner = new Html5Qrcode('reader');
+  }catch(e){ errbox.textContent='Scanner library failed to load: '+e; errbox.style.display='block'; return; }
+  var cfg = { fps:12, qrbox:{width:290,height:140},
+    formatsToSupport:[Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.ITF,Html5QrcodeSupportedFormats.QR_CODE] };
+  scanner.start({facingMode:'environment'}, cfg, onDecode, function(){}).catch(function(err){
+    errbox.textContent = 'Camera failed to start: '+err+'. Check that camera permission is allowed for this site in your browser settings.';
+    errbox.style.display='block';
+  });
+}
+
+/* ---------- anti-partial-read gate ---------- */
+function onDecode(text){
+  text = String(text).trim();
+  var now = Date.now();
+  if(text.length < MIN_LEN) return;
+  if(lastAccepted[text] && now-lastAccepted[text] < COOLDOWN_MS) return;
+  if(text === candidate.v) candidate.n++; else candidate = {v:text,n:1};
+  if(candidate.n < CONFIRMS) return;
+  candidate = {v:'',n:0}; lastAccepted[text]=now;
+  accept(text);
+}
+function manualAdd(){
+  var el=document.getElementById('manualbc'); var v=el.value.trim();
+  if(v.length<MIN_LEN){ toast('Code looks too short.'); return; }
+  el.value=''; accept(v);
+}
+function accept(code){
+  if(session.some(function(s){return s.barcode===code && s.action===mode;})){
+    buzz(false); toast(code+' already scanned for this step.'); return;
+  }
+  session.unshift({ id:'c'+Date.now()+Math.random().toString(36).slice(2,6),
+    barcode:code, action:mode, discFlag:false, discAmount:'', discNote:'',
+    clientTime:new Date().toISOString(),
+    hold: mode==='Return after audit', sent:false });
+  persist(); buzz(true); render();
+}
+
+/* ---------- discrepancy flag ---------- */
+function toggleFlag(id){
+  var it = session.find(function(s){return s.id===id;}); if(!it||it.sent) return;
+  it.discFlag = !it.discFlag; persist(); render();
+}
+function setDisc(id, field, val){
+  var it = session.find(function(s){return s.id===id;}); if(!it||it.sent) return;
+  it[field]=val; persist();
+}
+
+/* ---------- sending ---------- */
+function flush(manual){
+  if(sending || !navigator.onLine || !myPin()){ render(); return; }
+  var batch = session.filter(function(s){return !s.sent && (!s.hold || manual);});
+  if(!batch.length){ render(); return; }
+  sending = true; render();
+  fetch(SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ pin: myPin(), scans: batch.map(function(b){ return {
+      barcode:b.barcode, action:b.action, discFlag:b.discFlag,
+      discAmount:b.discAmount, discNote:b.discNote, clientTime:b.clientTime }; }) })
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      sending = false;
+      if(d.ok){ batch.forEach(function(b){ b.sent=true; b.hold=false; }); }
+      else { toast('Server said: '+(d.error||'save failed')+'. Kept in queue.'); }
+      persist(); render();
+    })
+    .catch(function(){ sending=false; toast('No connection. Scans kept in queue.'); render(); });
+}
+
+/* ---------- ui ---------- */
+function render(){
+  var q = session.filter(function(s){return !s.sent;}).length;
+  var d = session.filter(function(s){return s.sent;}).length;
+  document.getElementById('nqueued').textContent=q;
+  document.getElementById('nsent').textContent=d;
+  document.getElementById('netstate').textContent = navigator.onLine ? (sending?'saving…':'online') : 'offline — will send when back';
+  document.getElementById('sendbtn').disabled = q===0 || sending;
+  var list=document.getElementById('list'); if(!mode){list.innerHTML='';return;}
+  list.innerHTML = session.filter(function(s){return s.action===mode;}).map(function(s){
+    var g = GAMES[s.barcode];
+    var badge = s.sent ? '<span class="badge b-sent">saved</span>' : '<span class="badge b-queued">queued</span>';
+    var unreg = (g===undefined && Object.keys(GAMES).length) ? '<span class="badge b-unreg">not registered</span>' : '';
+    var flag = '';
+    if(s.action==='Return after audit'){
+      flag = '<div class="row"><button class="flagbtn'+(s.discFlag?' on':'')+'" onclick="toggleFlag(\''+s.id+'\')">'+(s.discFlag?'&#9873; Flagged':'Flag difference')+'</button></div>';
+      if(s.discFlag) flag += '<div class="flagbox"><input inputmode="decimal" placeholder="$ amount" value="'+(s.discAmount||'')+'" onchange="setDisc(\''+s.id+'\',\'discAmount\',this.value)">'
+        + '<input placeholder="What was off?" value="'+String(s.discNote||'').replace(/"/g,'&quot;')+'" onchange="setDisc(\''+s.id+'\',\'discNote\',this.value)"></div>';
+    }
+    return '<div class="item"><div class="row"><code>'+s.barcode+'</code><span class="game">'+(g||'')+'</span>'+unreg+badge+'</div>'+flag+'</div>';
+  }).join('');
+}
+function persist(){ localStorage.setItem('ft_session', JSON.stringify(session.slice(0,200))); }
+function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2800); }
+
+var actx=null;
+function buzz(ok){
+  try{ navigator.vibrate && navigator.vibrate(ok?60:[40,60,40]); }catch(e){}
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    var o=actx.createOscillator(), gn=actx.createGain();
+    o.frequency.value = ok?880:220; gn.gain.value=.08;
+    o.connect(gn); gn.connect(actx.destination); o.start();
+    setTimeout(function(){o.stop();}, ok?90:180);
+  }catch(e){}
+}
+
+/* ---------- boot ---------- */
+paintIdentity(); refreshGames(); render();
+setInterval(function(){flush(false);}, AUTO_FLUSH_MS);
+window.addEventListener('online',render); window.addEventListener('offline',render);
+</script>
+</body>
+</html>
